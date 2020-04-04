@@ -1,15 +1,11 @@
 '''
 Environmental requirements: python3 pypiwin32
 '''
-import sys
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, Type
 
 import win32api
 import win32con
-import socket
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import json
-
 from attr import dataclass
 
 
@@ -122,7 +118,7 @@ def NetControl():
         port = 10086
     web_host = ('0.0.0.0', port)
     server = HTTPServer(web_host, WebCommandRequestHandler)
-    print("web server started, listening at: %s" % web_host)
+    print("web server started, listening at: %s" % str(web_host))
     server.serve_forever()
 
 
