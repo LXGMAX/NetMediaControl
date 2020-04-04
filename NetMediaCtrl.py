@@ -5,7 +5,6 @@ import sys
 import win32api
 import win32con
 import socket
-
 def CtrlAltKeyDown():
     win32api.keybd_event(17, 0, 0, 0)  # ctrl键位码是17
     win32api.keybd_event(18, 0, 0, 0)  # alt键位码是18
@@ -25,36 +24,81 @@ def MediaControl(action):
         ActionKey(80)
     if action == 'next':
         ActionKey(39)
-    if action == 'Previous':
+    if action == 'previous':
         ActionKey(37)
     CtrlAltKeyUp()
 
 def NetControl():
-    print("MCServer Starting")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('127.0.0.1', 10086))  #配置soket，绑定IP地址和端口号
-    sock.listen(5) #设置最大允许连接数，各连接和server的通信遵循FIFO原则
-    print("MCServer is listenting port 10086,max connection 5")
-    http_resp = """\
-HTTP/1.1 200 OK
+    try:
+        WebPort = int(input('Input server port,default [10086]:'))
+    except Exception:
+        WebPort = 10086
+    #WebAddr = tuple('192.168.1.5')
+    WebHost = ('0.0.0.0', WebPort)
+    WebRespHeader = '''HTTP/1.1 200 OK
+Content-Type: text/html
 
-Web Page
-"""
+'''.encode(encoding='utf-8')
+    #建立新socket
+    sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #绑定端口和监听
+    sck.bind(WebHost)
+    sck.listen(100)
+    #报头报文分隔符
+    LineSeparator = '\r\n\r\n'
+    print('Web Port %d' %WebPort)
+    print('URL: http://192.168.1.5:%d' %WebPort)
+
     while True:
-        client_cnt,client_addr = sock.accept()
-        try:
-            connection.settimeout(50)
-            rqst = sock.recv(1024)
-            print(rqst.decode("utf-8"))
-            client_cnt.sendall(http_resp.encode("utf-8"))
-            print(rqst,client_addr)
-            
-        except:
-            print("socket ERROR")
-            sock.close()
-            break
-    sock.close()    
+        client, address = sck.accept()
+        request = client.recv(1024).decode(encoding='utf-8')
+        request_text = request.split(LineSeparator)
+        request_header = request_text[0]
+        request_body = request_text[1]
+        request_method = request_header.split(' ')[0]
+        request_url = request_header.split(' ')[1]
+        
+        WebRespBody = '''<!DOCTYPE html>
+        <html>
+            <form action="/" method="post" style="text-align:center">
+                <p>Pause: <input type="text" name="act" value="pause"/></p>
+                <input type="submit" value="pause" />
+            </form>
+            <form action="/" method="post" style="text-align:center">
+                <p>Next: <input type="text" name="act" value="next"/></p>
+                <input type="submit" value="next" />
+            </form>
+            <form action="/" method="post" style="text-align:center">
+                <p>Previous: <input type="text" name="act" value="previous"/></p>
+                <input type="submit" value="previous" />
+            </form>
+        </html>'''.encode(encoding='utf-8')
+        WebResp = ''.encode(encoding='utf-8')
+        print(address)
+        #print('RAW-BEGIN:\r\n' + request + '\r\nEND-RAW')
+        print('RAW-HEADER:' + request_header + 'RAW-HEADER-END')
+        #print('RAW-BODY:' + request_body + 'RAW-BODY-END')
+        print('RAW-URL:' + request_url + 'RAW-URL-END')
+        if request_method == 'GET':
+            WebResp += WebRespHeader + WebRespBody
+            client.sendall(WebResp)
+        elif request_method == 'POST':
+            print('POST')
+            WebResp += WebRespHeader + WebRespBody
+            print('RAW-BODY:' + request_body + 'RAW-BODY-END')
+
+            if request_body == 'act=pause':
+                MediaControl('pause')
+            elif request_body == 'act=previous':
+                MediaControl('previous')
+            elif request_body == 'act=next':
+                MediaControl('next')
+            else:
+                print('ERROR')
+                
+            client.sendall(WebResp)
+        client.close()
+
 if __name__=="__main__":
     NetControl()
-    MediaControl('next')
+    #MediaControl('pause')
