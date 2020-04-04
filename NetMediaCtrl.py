@@ -2,24 +2,35 @@
 Environmental requirements: python3 pypiwin32
 '''
 import sys
+from typing import Dict, Type
+
 import win32api
 import win32con
 import socket
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+
+from attr import dataclass
+
+
 def CtrlAltKeyDown():
     win32api.keybd_event(17, 0, 0, 0)  # ctrl键位码是17
     win32api.keybd_event(18, 0, 0, 0)  # alt键位码是18
-    
+
+
 def CtrlAltKeyUp():
     win32api.keybd_event(18, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
     win32api.keybd_event(17, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
-    
+
+
 # p键位码是80,right键位码是39,left键位码是37,D键位码是68
 def ActionKey(KCode):
-    win32api.keybd_event(KCode, 0, 0, 0)  
+    win32api.keybd_event(KCode, 0, 0, 0)
     win32api.keybd_event(KCode, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
-    
+
+
 def MediaControl(action):
-    CtrlAltKeyDown()    
+    CtrlAltKeyDown()
     if action == 'pause':
         ActionKey(80)
     if action == 'next':
@@ -28,77 +39,93 @@ def MediaControl(action):
         ActionKey(37)
     CtrlAltKeyUp()
 
+
+@dataclass
+class Response:
+    code: int
+    header: Dict[str, str]
+    content: str
+
+
+@dataclass
+class Request:
+    path: str
+    data: str
+
+
+class Page:
+    def do_get(self, request: Request) -> Response:
+        pass
+
+    def do_post(self, request: Request) -> Response:
+        pass
+
+
+class HomePage(Page):
+    def do_get(self, request: Request) -> Response:
+        return HomePage._get_home_page()
+
+    @staticmethod
+    def _get_home_page():
+        return Response(code=200, header={'Content-type': 'Content-Type: text/html;charset=UTF-8'},
+                        content=open('home.html').read())
+
+    def do_post(self, request: Request) -> Response:
+        action = request.data
+        if action == 'act=pause':
+            MediaControl('pause')
+        elif action == 'act=previous':
+            MediaControl('previous')
+        elif action == 'act=next':
+            MediaControl('next')
+        return HomePage._get_home_page()
+
+
+router: Dict[str, Type[Page]] = {
+    '/': HomePage
+}
+
+
+class WebCommandRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        if self.path not in router.keys():
+            self.return_page_not_found()
+            return
+        res = router.get(self.path)().do_get(Request(path=self.path, data=''))
+        self._send_response(res)
+
+    def return_page_not_found(self):
+        self.send_error(404, 'are you ok?')
+
+    def _send_response(self, res: Response):
+        self.send_response(res.code)
+        for k, v in res.header.items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(res.content.encode(encoding='utf-8'))
+
+    def do_POST(self):
+        if self.path not in router.keys():
+            self.return_page_not_found()
+            return
+        length = int(self.headers['content-length'])
+        res = router.get(self.path)().do_post(Request(path=self.path, data=self.rfile.read(length).decode()))
+        self._send_response(res)
+        pass
+
+
 def NetControl():
     try:
-        WebPort = int(input('Input server port,default [10086]:'))
+        port = int(input('Input server port,default [10086]:'))
     except Exception:
-        WebPort = 10086
-    #WebAddr = tuple('192.168.1.5')
-    WebHost = ('0.0.0.0', WebPort)
-    WebRespHeader = '''HTTP/1.1 200 OK
-Content-Type: text/html
+        port = 10086
+    web_host = ('0.0.0.0', port)
+    server = HTTPServer(web_host, WebCommandRequestHandler)
+    print("web server started, listening at: %s" % web_host)
+    server.serve_forever()
 
-'''.encode(encoding='utf-8')
-    #建立新socket
-    sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #绑定端口和监听
-    sck.bind(WebHost)
-    sck.listen(100)
-    #报头报文分隔符
-    LineSeparator = '\r\n\r\n'
-    print('Web Port %d' %WebPort)
-    print('URL: http://192.168.1.5:%d' %WebPort)
 
-    while True:
-        client, address = sck.accept()
-        request = client.recv(1024).decode(encoding='utf-8')
-        request_text = request.split(LineSeparator)
-        request_header = request_text[0]
-        request_body = request_text[1]
-        request_method = request_header.split(' ')[0]
-        request_url = request_header.split(' ')[1]
-        
-        WebRespBody = '''<!DOCTYPE html>
-        <html>
-            <form action="/" method="post" style="text-align:center">
-                <p>Pause: <input type="text" name="act" value="pause"/></p>
-                <input type="submit" value="pause" />
-            </form>
-            <form action="/" method="post" style="text-align:center">
-                <p>Next: <input type="text" name="act" value="next"/></p>
-                <input type="submit" value="next" />
-            </form>
-            <form action="/" method="post" style="text-align:center">
-                <p>Previous: <input type="text" name="act" value="previous"/></p>
-                <input type="submit" value="previous" />
-            </form>
-        </html>'''.encode(encoding='utf-8')
-        WebResp = ''.encode(encoding='utf-8')
-        print(address)
-        #print('RAW-BEGIN:\r\n' + request + '\r\nEND-RAW')
-        print('RAW-HEADER:' + request_header + 'RAW-HEADER-END')
-        #print('RAW-BODY:' + request_body + 'RAW-BODY-END')
-        print('RAW-URL:' + request_url + 'RAW-URL-END')
-        if request_method == 'GET':
-            WebResp += WebRespHeader + WebRespBody
-            client.sendall(WebResp)
-        elif request_method == 'POST':
-            print('POST')
-            WebResp += WebRespHeader + WebRespBody
-            print('RAW-BODY:' + request_body + 'RAW-BODY-END')
-
-            if request_body == 'act=pause':
-                MediaControl('pause')
-            elif request_body == 'act=previous':
-                MediaControl('previous')
-            elif request_body == 'act=next':
-                MediaControl('next')
-            else:
-                print('ERROR')
-                
-            client.sendall(WebResp)
-        client.close()
-
-if __name__=="__main__":
+if __name__ == "__main__":
     NetControl()
-    #MediaControl('pause')
+    # MediaControl('pause')
