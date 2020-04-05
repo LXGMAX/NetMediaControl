@@ -1,11 +1,6 @@
 # NetMediaControl
 
 网络控制电脑网易云播放
-
-完成本地控制，目标使用HTTP控制，方便移动端接入
-
-develop分支已经实现基础功能
-
 > ## 使用方法：
 > * 安装依赖环境 `pip install python3 pypiwin32 attrs`
 > * 运行 `RUN_NOW.ps1` Powershell脚本
