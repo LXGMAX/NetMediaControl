@@ -1,8 +1,9 @@
 '''
-Environmental requirements: python3 pypiwin32
+Environmental requirements: python3 pypiwin32 attrs
 '''
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, Type
+import socket
 
 import win32api
 import win32con
@@ -111,6 +112,16 @@ class WebCommandRequestHandler(BaseHTTPRequestHandler):
         pass
 
 
+def get_host_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
+
+
 def NetControl():
     try:
         port = int(input('Input server port,default [10086]:'))
@@ -119,9 +130,9 @@ def NetControl():
     web_host = ('0.0.0.0', port)
     server = HTTPServer(web_host, WebCommandRequestHandler)
     print("web server started, listening at: %s" % str(web_host))
+    print("URL: http://%s:10086" % str(get_host_ip()))
     server.serve_forever()
 
 
 if __name__ == "__main__":
     NetControl()
-    # MediaControl('pause')
