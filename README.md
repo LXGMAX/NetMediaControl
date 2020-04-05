@@ -16,3 +16,4 @@ develop分支已经实现基础功能
 > + ⚠ 目前未能实现iOS设备访问
 > + ⚠ 桌面端和笔记本快捷键不一定相同，请先确认网易云设定快捷键具体值
 
+感谢 [longweiqiang/MediaCtrl](https://github.com/longweiqiang/MediaCtrl) 启发
