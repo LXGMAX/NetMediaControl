@@ -2,7 +2,7 @@
 
 网络控制电脑网易云播放
 > ## 使用方法：
-> * 安装依赖环境 `pip install python3 pypiwin32 attrs`
+> * 安装依赖环境 `pip install pypiwin32 attrs`
 > * 运行 `RUN_NOW.ps1` Powershell脚本
 > * 同一局域网内手机端打开输出的URL即可控制
 
