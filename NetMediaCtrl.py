@@ -20,7 +20,7 @@ def CtrlAltKeyUp():
     win32api.keybd_event(17, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
 
 
-# p键位码是80,right键位码是39,left键位码是37,D键位码是68
+# p键位码是80,right键位码是39,left键位码是37,D键位码是68,L是76
 def ActionKey(KCode):
     win32api.keybd_event(KCode, 0, 0, 0)
     win32api.keybd_event(KCode, 0, win32con.KEYEVENTF_KEYUP, 0)  # 释放按键
@@ -34,6 +34,8 @@ def MediaControl(action):
         ActionKey(39)
     if action == 'previous':
         ActionKey(37)
+    if action == 'like':
+        ActionKey(76)
     CtrlAltKeyUp()
 
 
@@ -75,6 +77,8 @@ class HomePage(Page):
             MediaControl('previous')
         elif action == 'act=next':
             MediaControl('next')
+        elif action == 'act=like':
+            MediaControl('like')
         return HomePage._get_home_page()
 
 
