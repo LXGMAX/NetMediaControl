@@ -1,5 +1,5 @@
 '''
-Environmental requirements: python3 pypiwin32 attrs
+Environmental requirements: python3 pypiwin32 attrs qrcode
 '''
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, Type
@@ -7,6 +7,7 @@ import socket
 
 import win32api
 import win32con
+import qrcode
 from attr import dataclass
 
 
@@ -134,16 +135,31 @@ def get_host_ip():
     return ip
 
 
+def qrcode_gen(url):
+    qr = qrcode.QRCode()
+    qr.border = 1
+    qr.add_data(url)
+    qr.make()
+    qr.print_ascii(out=None, tty=False, invert=False)
+
+
 def NetControl():
+    print("Starting")
     try:
         port = int(input('Input server port,default [10086]:'))
     except Exception:
         port = 10086
     web_host = ('0.0.0.0', port)
     server = HTTPServer(web_host, WebCommandRequestHandler)
-    print("web server started, listening at: %s" % str(web_host))
-    print("URL: http://%s:10086" % str(get_host_ip()))
-    server.serve_forever()
+    print("Web server started, listening at: %s" % str(web_host))
+    link_addr = "http://" + str(get_host_ip()) + ":" + str(port)
+    print(link_addr)
+    qrcode_gen(link_addr)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("Exiting")
+        pass
 
 
 if __name__ == "__main__":
