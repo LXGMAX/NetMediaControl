@@ -71,7 +71,7 @@ class HomePage(Page):
 
     @staticmethod
     def _get_home_page():
-        return Response(code=200, header={'Content-type': 'Content-Type: text/html;charset=UTF-8'},
+        return Response(code=200, header={'Content-Type': 'text/html'},
                         content=open('home.html').read())
 
     def do_post(self, request: Request) -> Response:
